@@ -1,0 +1,4 @@
+---
+metadata:
+  name: micro-cluster
+  description: HPC micro-cluster driven by Ansible automation.

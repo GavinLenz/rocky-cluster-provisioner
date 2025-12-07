@@ -1,0 +1,151 @@
+---
+- name: Validate PXE environment readiness
+  when: inventory_hostname in groups['controller']
+  block:
+
+    # 1. Core variable sanity
+    - name: Assert PXE directories are defined
+      ansible.builtin.assert:
+        that:
+          - pxe_settings.tftp_root is defined
+          - pxe_settings.http_root is defined
+          - pxe_settings.iso_mount is defined
+        fail_msg: "PXE directory variables are undefined."
+        success_msg: "PXE directory variables are defined."
+
+    # 2. Directory existence validation
+    - name: Stat PXE directories
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ pxe_settings.tftp_root }}"
+        - "{{ pxe_settings.http_root }}"
+        - "{{ pxe_settings.iso_mount }}"
+      register: pxe_dirs
+
+    - name: Assert PXE directories exist
+      ansible.builtin.assert:
+        that:
+          - pxe_dirs.results | map(attribute='stat.exists') | min
+        fail_msg: "One or more PXE directories are missing."
+        success_msg: "PXE directories exist."
+
+    # 3. SELinux context verification
+    - name: Check SELinux context on TFTP root
+      ansible.builtin.command: "stat -c %C {{ pxe_settings.tftp_root }}"
+      register: selinux_tftp
+      changed_when: false
+
+    - name: Assert SELinux context for TFTP root
+      ansible.builtin.assert:
+        that:
+          - "'tftpdir_t' in selinux_tftp.stdout"
+        fail_msg: "Incorrect SELinux context on TFTP root."
+        success_msg: "TFTP SELinux context is valid."
+
+    - name: Check SELinux context on HTTP root
+      ansible.builtin.command: "stat -c %C {{ pxe_settings.http_root }}"
+      register: selinux_http
+      changed_when: false
+
+    - name: Assert SELinux context for HTTP root
+      ansible.builtin.assert:
+        that:
+          - "'httpd_sys_content_t' in selinux_http.stdout"
+        fail_msg: "Incorrect SELinux context on HTTP root."
+        success_msg: "HTTP SELinux context is valid."
+
+    # 4. ISO mount and PXE kernel verification
+    - name: Stat ISO kernel
+      ansible.builtin.stat:
+        path: "{{ pxe_settings.iso_mount }}/images/pxeboot/vmlinuz"
+      register: iso_kernel
+
+    - name: Assert ISO mount valid
+      ansible.builtin.assert:
+        that:
+          - iso_kernel.stat.exists
+        fail_msg: "ISO not mounted or kernel missing."
+        success_msg: "ISO mount valid."
+
+    # 5. iPXE binary verification
+    - name: Stat iPXE binary
+      ansible.builtin.stat:
+        path: "{{ pxe_settings.tftp_root }}/{{ pxe_settings.uefi_name }}"
+      register: ipxe_bin
+
+    - name: Assert iPXE binary present and valid
+      ansible.builtin.assert:
+        that:
+          - ipxe_bin.stat.exists
+          - ipxe_bin.stat.size | int > 100000
+        fail_msg: "iPXE binary missing or malformed."
+        success_msg: "iPXE binary is valid."
+
+    # 6. dnsmasq configuration and interface binding
+    - name: Stat dnsmasq PXE config
+      ansible.builtin.stat:
+        path: /etc/dnsmasq.d/pxe.conf
+      register: dnsmasq_cfg
+
+    - name: Assert dnsmasq PXE config present
+      ansible.builtin.assert:
+        that:
+          - dnsmasq_cfg.stat.exists
+          - dnsmasq_cfg.stat.size > 200
+        fail_msg: "PXE dnsmasq config missing or incomplete."
+        success_msg: "dnsmasq PXE config exists."
+
+    - name: Read dnsmasq configuration
+      ansible.builtin.slurp:
+        path: /etc/dnsmasq.d/pxe.conf
+      register: dnsmasq_raw
+
+    - name: Assert dnsmasq binds to expected server IP
+      ansible.builtin.assert:
+        that:
+          - ("listen-address=" ~ pxe_settings.server_ip) in (dnsmasq_raw.content | b64decode)
+        fail_msg: "dnsmasq is not listening on {{ pxe_settings.server_ip }} as expected."
+        success_msg: "dnsmasq is correctly bound via listen-address={{ pxe_settings.server_ip }}."
+
+    # 7. Kickstart file presence
+    - name: Stat Kickstart file
+      ansible.builtin.stat:
+        path: "{{ pxe_settings.http_root }}/ks.cfg"
+      register: ks_file
+
+    - name: Assert Kickstart file exists and is non-empty
+      ansible.builtin.assert:
+        that:
+          - ks_file.stat.exists
+          - ks_file.stat.size > 100
+        fail_msg: "Kickstart file missing or invalid at {{ pxe_settings.http_root }}/ks.cfg."
+        success_msg: "Kickstart file is present and valid."
+
+    # 8. Firewall exposure checks
+    - name: Query firewalld services
+      ansible.builtin.command: "firewall-cmd --list-services"
+      register: firewall_svcs
+      changed_when: false
+
+    - name: Assert PXE-required services allowed
+      ansible.builtin.assert:
+        that:
+          - "'http' in firewall_svcs.stdout"
+          - "'tftp' in firewall_svcs.stdout"
+          - "'dhcp' in firewall_svcs.stdout"
+        fail_msg: "Firewall missing one or more PXE services (http, tftp, dhcp)."
+        success_msg: "Firewall exposes required PXE services."
+
+    # 9. Service state verification
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert PXE services running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['dnsmasq.service'].state == 'running'
+          - ansible_facts.services['httpd.service'].state == 'running'
+          - ansible_facts.services['firewalld.service'].state == 'running'
+        fail_msg: "One or more PXE services are inactive."
+        success_msg: "All PXE services active."

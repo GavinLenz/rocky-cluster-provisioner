@@ -1,0 +1,37 @@
+---
+- name: Verify Python interpreter availability
+  ansible.builtin.raw: >-
+    test -x {{ compute_common_python_interpreter }} ||
+    (echo "Python interpreter missing at {{ compute_common_python_interpreter }}" >&2 && exit 1)
+  changed_when: false
+
+- name: Ensure cluster groups exist
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    state: present
+    system: "{{ item.system | default(true) }}"
+  loop: "{{ compute_common_groups }}"
+
+- name: Create automation users
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | default([]) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    state: present
+  loop: "{{ compute_common_users }}"
+
+- name: Configure passwordless sudo for automation user
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/99-ansible-nopasswd
+    content: "ansible ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: '0440'
+
+- name: Install controller public key for automation user
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.authorized_key }}"
+    state: present
+  loop: "{{ compute_common_users | selectattr('authorized_key', 'defined') }}"
+  when: item.authorized_key | length > 0

@@ -1,0 +1,32 @@
+#version=RHEL9
+text
+lang en_US.UTF-8
+keyboard us
+timezone UTC --utc
+
+rootpw --iscrypted {{ pxe_settings.root_password_hash }}
+user --name={{ pxe_settings.username }} --groups=wheel --iscrypted --password={{ pxe_settings.local_user_password_hash | default(pxe_settings.root_password_hash) }}
+reboot
+
+url --url "http://{{ pxe_settings.server_ip }}/os"
+network --bootproto=dhcp
+
+firewall --enabled --service=ssh
+selinux --enforcing
+
+bootloader --location=mbr --boot-drive={{ pxe_settings.install_drive | default('nvme0n1') }}
+ignoredisk --only-use={{ pxe_settings.install_drive | default('nvme0n1') }}
+clearpart --drives={{ pxe_settings.install_drive | default('nvme0n1') }} --initlabel
+autopart --type=lvm
+
+%packages
+@^minimal-environment
+%end
+
+%post
+# Enable passwordless sudo for the PXE-created user
+echo "{{ pxe_settings.username | default('ansible') }} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-{{ pxe_settings.username | default('ansible') }}-nopasswd
+chmod 0440 /etc/sudoers.d/99-{{ pxe_settings.username | default('ansible') }}-nopasswd
+
+echo "Installation complete" > /root/post.log
+%end

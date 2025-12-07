@@ -1,0 +1,6 @@
+ansible-core
+PyYAML
+rich
+passlib
+python-dotenv
+netaddr

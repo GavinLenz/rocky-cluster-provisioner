@@ -1,0 +1,31 @@
+---
+# These are derived from the top-level inventory vars:
+
+# Repository Paths
+controller_cluster_repo_root: "{{ cluster_repo_root }}"
+controller_cluster_config_root: "{{ cluster_config_root }}"
+controller_cluster_meta_root: "{{ cluster_meta_root | default(cluster_config_root) }}"
+
+# Core Cluster Metadata
+controller_cluster_name: "{{ cluster_name | default('cluster') }}"
+controller_cluster_description: >-
+  {{ cluster_description | default('High-performance cluster controller') }}
+
+# Controller Identity
+controller_user: "{{ ansible_user | default('ansible') }}"
+controller_group: "{{ controller_user }}"
+controller_mode: "0755"
+controller_hostname: "{{ inventory_hostname }}"
+
+# Networking (from network_config in inventory)
+controller_interface: "{{ network_config.pxe_iface }}"
+controller_ip: "{{ network_config.server_ip }}"
+controller_gateway: "{{ network_config.gateway | default(network_config.server_ip, true) }}"
+controller_dns: "{{ network_config.dns }}"
+controller_subnet: "{{ network_config.subnet }}"
+controller_dhcp_range_start: "{{ network_config.dhcp_range.start }}"
+controller_dhcp_range_end: "{{ network_config.dhcp_range.end }}"
+
+# PXE Integration (exposed via inventory already; keep for compatibility)
+controller_pxe_install_drive: "{{ pxe_config.install.drive | default('nvme0n1') }}"
+controller_pxe_default_target: "{{ pxe_config.ipxe.default_target | default('local') }}"

@@ -1,0 +1,43 @@
+---
+- name: PXE
+  block:
+    - name: Include PXE preflight tasks
+      ansible.builtin.import_tasks: preflight.yml
+      tags:
+        - pxe
+        - pxe_preflight
+    - name: Include PXE firewall tasks
+      ansible.builtin.import_tasks: firewall.yml
+      tags:
+        - pxe
+        - pxe_firewall
+    - name: Include PXE httpd tasks
+      ansible.builtin.import_tasks: httpd.yml
+      tags:
+        - pxe
+        - httpd
+    - name: Include PXE ISO tasks
+      ansible.builtin.import_tasks: iso.yml
+      tags:
+        - pxe
+        - pxe_iso
+    - name: Include PXE binaries tasks
+      ansible.builtin.import_tasks: binaries.yml
+      tags:
+        - pxe
+        - pxe_binaries
+    - name: Include PXE configuration deployment tasks
+      ansible.builtin.import_tasks: deploy_configs.yml
+      tags:
+        - pxe
+        - pxe_configs
+    - name: Include PXE services tasks
+      ansible.builtin.import_tasks: services.yml
+      tags:
+        - pxe
+        - pxe_services
+    - name: Include PXE validation tasks
+      ansible.builtin.import_tasks: validate.yml
+      tags:
+        - pxe
+        - pxe_validate

@@ -1,0 +1,12 @@
+# Do not place PXE or DHCP options here
+
+user=dnsmasq
+group=dnsmasq
+bind-interfaces
+domain-needed
+bogus-priv
+log-queries
+log-dhcp
+
+# Directory for additional dnsmasq configurations (PXE, DHCP, etc.)
+conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig

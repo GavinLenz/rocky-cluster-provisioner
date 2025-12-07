@@ -1,0 +1,15 @@
+---
+- name: Ensure ISO present
+  ansible.builtin.get_url:
+    url: "{{ pxe_settings.iso_url }}"
+    dest: "{{ pxe_settings.iso_path }}"
+    mode: "0644"
+    checksum: "{{ pxe_settings.iso_checksum }}"
+
+- name: Mount ISO
+  ansible.posix.mount:
+    path: "{{ pxe_settings.iso_mount }}"
+    src: "{{ pxe_settings.iso_path }}"
+    fstype: iso9660
+    opts: ro,loop
+    state: mounted

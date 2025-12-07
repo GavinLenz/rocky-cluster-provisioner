@@ -1,0 +1,6 @@
+---
+- name: Configure compute nodes
+  hosts: compute
+  become: true
+  roles:
+    - role: compute_common

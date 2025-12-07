@@ -1,0 +1,14 @@
+---
+network:
+  pxe_iface: enp5s0
+  server_ip: 10.0.0.1
+  subnet: 10.0.0.0/24
+  netmask: 255.255.255.0
+  gateway: null
+  dns: 8.8.8.8
+  firewall_allowed_subnets:
+    - 10.0.0.0/24 # cluster LAN
+    - 192.168.68.0/24 # home LAN
+  dhcp_range:
+    start: 10.0.0.10
+    end: 10.0.0.15

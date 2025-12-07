@@ -1,0 +1,11 @@
+---
+roles:
+  controller:
+    stack:
+      - controller_common
+      - controller
+      - pxe
+
+  compute: # placeholder for future scheduler/application roles
+    stack:
+      - compute_common

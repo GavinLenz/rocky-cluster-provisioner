@@ -1,0 +1,36 @@
+---
+- name: Ensure cluster groups exist
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    state: present
+    system: "{{ item.system | default(true) }}"
+  loop: "{{ controller_common_groups }}"
+
+- name: Create cluster users
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | default([]) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    state: present
+  loop: "{{ controller_common_users }}"
+
+- name: Allow passwordless sudo for automation user
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/99-ansible-nopasswd
+    content: "ansible ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: '0440'
+
+- name: Install authorized SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.authorized_key }}"
+    state: present
+  loop: "{{ controller_common_users | selectattr('authorized_key', 'defined') }}"
+  when: item.authorized_key | length > 0
+
+- name: Ensure baseline packages installed
+  ansible.builtin.package:
+    name: "{{ controller_common_packages }}"
+    state: present

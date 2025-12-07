@@ -1,0 +1,15 @@
+---
+- name: Install webserver for PXE
+  ansible.builtin.package:
+    name: httpd
+    state: present
+
+- name: Deploy PXE Apache config
+  ansible.builtin.template:
+    src: apache_pxe.conf.j2
+    dest: /etc/httpd/conf.d/pxe.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - restart httpd
