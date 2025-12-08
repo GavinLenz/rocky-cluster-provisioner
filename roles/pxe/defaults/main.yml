@@ -16,8 +16,7 @@ pxe_settings:
     | default('rocky9_minimal'), {}).name
     | default((pxe_config.image | default('rocky9_minimal')) ~ '.iso') }}
   iso_url: "{{ images.get(pxe_config.image | default('rocky9_minimal'), {}).url | default('') }}"
-  iso_checksum: >-
-    "{{ images.get(pxe_config.image | default('rocky9_minimal'), {}).checksum | default('') }}"
+  iso_checksum: "{{ images.get(pxe_config.image | default('rocky9_minimal'), {}).checksum}}"
 
   # Networking
   boot_interface: "{{ network_config.pxe_iface }}"

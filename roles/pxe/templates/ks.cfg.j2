@@ -16,7 +16,7 @@ selinux --enforcing
 
 bootloader --location=mbr --boot-drive={{ pxe_settings.install_drive | default('nvme0n1') }}
 ignoredisk --only-use={{ pxe_settings.install_drive | default('nvme0n1') }}
-clearpart --drives={{ pxe_settings.install_drive | default('nvme0n1') }} --initlabel
+clearpart --all --initlabel --drives={{ pxe_settings.install_drive | default('nvme0n1') }}
 autopart --type=lvm
 
 %packages
